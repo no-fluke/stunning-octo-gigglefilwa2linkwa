@@ -22,7 +22,7 @@ import asyncio
 import logging
 import time
 
-from pyrogram import Client, filters
+from pyrogram import Client, filters, StopPropagation
 from pyrogram.errors import FloodWait
 from pyrogram.types import Message
 
@@ -134,9 +134,6 @@ async def bulk_file_collector(client: Client, msg: Message):
     if uid not in bulk_mode:
         return  # let private_stream.py handle normally
 
-    # Stop propagation so private_stream.py won't also reply
-    msg.stop_propagation()
-
     filename = _get_filename(msg)
     bulk_sessions[uid].append({"msg": msg, "filename": filename})
     count = len(bulk_sessions[uid])
@@ -148,6 +145,9 @@ async def bulk_file_collector(client: Client, msg: Message):
         )
     elif count % 50 == 0:
         await msg.reply_text(f"📦 **{count}** files collected so far. Keep going or /done.")
+
+    # Raise StopPropagation AFTER replying so private_stream.py doesn't also handle it
+    raise StopPropagation
 
 
 # ── /done ──────────────────────────────────────────────────────────────────
