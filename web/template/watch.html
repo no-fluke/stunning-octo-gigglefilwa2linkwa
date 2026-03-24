@@ -61,8 +61,14 @@
     .plyr--video .plyr__control:hover { background: var(--secondary-color); }
     .plyr--full-ui input[type=range]  { color: var(--primary-color); }
 
+    /* Plyr container must be relative for absolute children */
     .plyr {
       position: relative !important;
+    }
+
+    /* Ensure Plyr settings menus appear above gesture overlay */
+    .plyr__menu__container {
+      z-index: 1000 !important;
     }
 
     /* Gesture overlay – sits above video but below controls */
@@ -71,11 +77,15 @@
       top: 0;
       left: 0;
       right: 0;
-      bottom: 48px;
+      bottom: 48px;   /* will be updated by JS */
       z-index: 10;
       display: flex;
       touch-action: none;
       pointer-events: all;
+      transition: pointer-events 0.1s;
+    }
+    #gestureOverlay.disabled {
+      pointer-events: none;
     }
     #gesturLeft, #gesturRight { flex: 1; height: 100%; }
 
@@ -209,6 +219,7 @@
       animation: rippleCircle 0.5s ease-out forwards;
     }
 
+    /* Buttons etc. unchanged */
     .btn-custom {
       border: none;
       border-radius: 12px;
@@ -299,6 +310,7 @@
         Your browser does not support the video tag.
       </video>
 
+      <!-- All interactive UI elements are moved inside .plyr dynamically -->
       <div id="gestureOverlay">
         <div id="gesturLeft"></div>
         <div id="gesturRight"></div>
@@ -382,6 +394,7 @@
       }
     }
 
+    // ResizeObserver to catch control bar height changes
     let controlObserver;
     function observeControls() {
       const controls = document.querySelector('.plyr__controls');
@@ -392,46 +405,63 @@
       }
     }
 
-    // ========== PLYR SETTINGS MENU GUARD ==========
-    // Watches the settings menu container; when it opens, disables the gesture
-    // overlay so clicks reach Plyr's speed/quality/captions controls unobstructed.
-    let settingsMenuObserver;
-    function watchSettingsMenu() {
-      const menuContainer = document.querySelector('.plyr__menu__container');
-      if (!menuContainer) return;
+    // Disable gesture overlay when settings menu is open, re-enable when closed
+    function setupSettingsMenuDetection() {
+      const plyrContainer = document.querySelector('.plyr');
+      if (!plyrContainer) return;
 
-      settingsMenuObserver = new MutationObserver(() => {
-        const isOpen = menuContainer.getAttribute('aria-hidden') === 'false';
-        gestureOverlay.style.pointerEvents = isOpen ? 'none' : 'all';
-      });
-
-      settingsMenuObserver.observe(menuContainer, {
-        attributes: true,
-        attributeFilter: ['aria-hidden']
-      });
-
-      // Also handle the settings button click directly as a fallback
-      const settingsBtn = document.querySelector('[data-plyr="settings"]');
-      if (settingsBtn) {
-        settingsBtn.addEventListener('click', () => {
-          // Give Plyr a tick to update aria-hidden, then re-check
+      // Listen for clicks on the settings button (gear icon)
+      const settingsButton = plyrContainer.querySelector('[data-plyr="settings"]');
+      if (settingsButton) {
+        settingsButton.addEventListener('click', () => {
+          // Menu will appear; we need to detect when it's fully open
           setTimeout(() => {
-            const isOpen = menuContainer.getAttribute('aria-hidden') === 'false';
-            gestureOverlay.style.pointerEvents = isOpen ? 'none' : 'all';
+            const menu = document.querySelector('.plyr__menu__container');
+            if (menu && menu.style.display !== 'none') {
+              gestureOverlay.classList.add('disabled');
+            }
           }, 50);
         });
       }
-    }
 
-    // Close gesture overlay lock whenever user clicks anywhere outside the menu
-    document.addEventListener('click', (e) => {
+      // Use MutationObserver to watch for menu container visibility changes
+      const observer = new MutationObserver((mutations) => {
+        for (let mutation of mutations) {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+            const menu = mutation.target;
+            if (menu.style.display === 'none' || menu.style.visibility === 'hidden' || !menu.offsetParent) {
+              gestureOverlay.classList.remove('disabled');
+            } else {
+              gestureOverlay.classList.add('disabled');
+            }
+          }
+        }
+      });
+
       const menuContainer = document.querySelector('.plyr__menu__container');
-      if (!menuContainer) return;
-      const isOpen = menuContainer.getAttribute('aria-hidden') === 'false';
-      if (!isOpen) {
-        gestureOverlay.style.pointerEvents = 'all';
+      if (menuContainer) {
+        observer.observe(menuContainer, { attributes: true, attributeFilter: ['style', 'class'] });
+      } else {
+        // If menu not yet present, wait for it
+        const waitForMenu = setInterval(() => {
+          const menu = document.querySelector('.plyr__menu__container');
+          if (menu) {
+            observer.observe(menu, { attributes: true, attributeFilter: ['style', 'class'] });
+            clearInterval(waitForMenu);
+          }
+        }, 200);
       }
-    });
+
+      // Also listen for fullscreen changes to re-evaluate menu state
+      document.addEventListener('fullscreenchange', () => {
+        const menu = document.querySelector('.plyr__menu__container');
+        if (menu && menu.style.display !== 'none' && menu.offsetParent) {
+          gestureOverlay.classList.add('disabled');
+        } else {
+          gestureOverlay.classList.remove('disabled');
+        }
+      });
+    }
 
     document.addEventListener("DOMContentLoaded", () => {
       player = new Plyr("#myVideo", {
@@ -443,22 +473,11 @@
         if (moveElementsToPlyrContainer()) {
           updateOverlayBottom();
           observeControls();
-          watchSettingsMenu(); // <-- settings menu guard starts here
+          setupSettingsMenuDetection();
         }
-        player.on('fullscreenchange', () => {
-          setTimeout(() => {
-            updateOverlayBottom();
-            // Re-attach observer after fullscreen DOM changes
-            watchSettingsMenu();
-          }, 200);
-        });
+        player.on('fullscreenchange', () => setTimeout(updateOverlayBottom, 100));
         window.addEventListener('resize', () => setTimeout(updateOverlayBottom, 50));
-        document.addEventListener('fullscreenchange', () => {
-          setTimeout(() => {
-            updateOverlayBottom();
-            watchSettingsMenu();
-          }, 200);
-        });
+        document.addEventListener('fullscreenchange', () => setTimeout(updateOverlayBottom, 100));
       }, 300);
     });
 
@@ -476,8 +495,8 @@
     const skipLblRight = document.getElementById('skipLabelRight');
 
     // ========== STATE ==========
-    let brightness = 1.0;
-    let volLevel = 1.0;
+    let brightness = 1.0;   // 0.1 – 2.0
+    let volLevel = 1.0;     // 0 – 1
     let hudTimers = {};
 
     // ========== UI HELPERS ==========
@@ -520,7 +539,7 @@
       hudTimers[ripple.id] = setTimeout(() => ripple.classList.remove('pop'), 700);
     }
 
-    // ========== DOUBLE-TAP SEEK ACCUMULATOR (per side) ==========
+    // ========== DOUBLE‑TAP SEEK ACCUMULATOR ==========
     let leftAccum = 0, rightAccum = 0;
     let leftCommitTimer = null, rightCommitTimer = null;
 
@@ -617,21 +636,17 @@
       setTimeout(() => c.remove(), 600);
     }
 
-    // ========== GESTURE VARIABLES ==========
+    // ========== GESTURE HANDLERS (touch + mouse) ==========
     const SWIPE_MIN = 12;
     const BRIGHT_SENS = 0.007;
     const VOL_SENS = 0.007;
     const SEEK_SENS = 0.25;
 
-    let ts = {
-      active: false, side: null, dir: null,
-      startX: 0, startY: 0, lastX: 0, lastY: 0,
-      seekStart: 0, moved: false
-    };
-
+    let ts = { active: false, side: null, dir: null, startX: 0, startY: 0, lastX: 0, lastY: 0, seekStart: 0, moved: false };
     const overlay = gestureOverlay;
 
     overlay.addEventListener('touchstart', (e) => {
+      if (gestureOverlay.classList.contains('disabled')) return;
       const t = e.touches[0];
       const rect = overlay.getBoundingClientRect();
       ts = {
@@ -646,17 +661,15 @@
     }, { passive: true });
 
     overlay.addEventListener('touchmove', (e) => {
-      if (!ts.active) return;
+      if (!ts.active || gestureOverlay.classList.contains('disabled')) return;
       const t = e.touches[0];
       const dx = t.clientX - ts.startX;
       const dy = t.clientY - ts.startY;
-
       if (!ts.dir) {
         if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return;
         ts.dir = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
         ts.moved = true;
       }
-
       if (ts.dir === 'vertical') {
         const delta = -(t.clientY - ts.lastY);
         if (ts.side === 'left') {
@@ -680,7 +693,7 @@
     }, { passive: false });
 
     overlay.addEventListener('touchend', (e) => {
-      if (!ts.moved) {
+      if (!ts.moved && !gestureOverlay.classList.contains('disabled')) {
         const t = e.changedTouches[0];
         const rect = overlay.getBoundingClientRect();
         const relX = t.clientX - rect.left;
@@ -691,14 +704,10 @@
       ts.active = false;
     });
 
-    // ========== MOUSE GESTURES (desktop) ==========
-    let ms = {
-      down: false, side: null, dir: null,
-      startX: 0, startY: 0, lastX: 0, lastY: 0,
-      seekStart: 0, moved: false
-    };
-
+    // Mouse gestures
+    let ms = { down: false, side: null, dir: null, startX: 0, startY: 0, lastX: 0, lastY: 0, seekStart: 0, moved: false };
     overlay.addEventListener('mousedown', (e) => {
+      if (gestureOverlay.classList.contains('disabled')) return;
       e.preventDefault();
       const rect = overlay.getBoundingClientRect();
       ms = {
@@ -711,9 +720,8 @@
         moved: false,
       };
     });
-
     window.addEventListener('mousemove', (e) => {
-      if (!ms.down) return;
+      if (!ms.down || gestureOverlay.classList.contains('disabled')) return;
       const dx = e.clientX - ms.startX;
       const dy = e.clientY - ms.startY;
       if (!ms.dir) {
@@ -740,9 +748,8 @@
       ms.lastX = e.clientX;
       ms.lastY = e.clientY;
     });
-
     overlay.addEventListener('mouseup', (e) => {
-      if (!ms.moved) {
+      if (!ms.moved && !gestureOverlay.classList.contains('disabled')) {
         const rect = overlay.getBoundingClientRect();
         const relX = e.clientX - rect.left;
         let zone = relX < rect.width / 3 ? 'left' : (relX > rect.width * 2 / 3 ? 'right' : 'center');
