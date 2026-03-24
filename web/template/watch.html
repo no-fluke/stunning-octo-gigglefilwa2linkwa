@@ -513,11 +513,11 @@
       }
     }
 
-    // ========== TAP / DOUBLE-TAP LOGIC (robust) ==========
+    // ========== TAP / DOUBLE-TAP LOGIC with default prevention ==========
     const DOUBLE_TAP_DELAY = 280;
     let lastTap = { side: null, time: 0, pendingSingle: null };
 
-    function handleTap(side, clientX, clientY) {
+    function handleTap(side, clientX, clientY, event) {
       const now = Date.now();
       // Double‑tap on same side?
       if (lastTap.side === side && (now - lastTap.time) < DOUBLE_TAP_DELAY) {
@@ -525,6 +525,11 @@
         if (lastTap.pendingSingle) {
           clearTimeout(lastTap.pendingSingle);
           lastTap.pendingSingle = null;
+        }
+        // Prevent default browser behavior (zoom, fullscreen, etc.)
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
         }
         // Double‑tap action
         if (side === 'left') accumulateSkip('left', -10);
@@ -540,9 +545,8 @@
       // Single tap: schedule preview after delay (unless double‑tap cancels)
       if (lastTap.pendingSingle) clearTimeout(lastTap.pendingSingle);
       lastTap = { side: side, time: now, pendingSingle: setTimeout(() => {
-        // Single tap action
+        // Single tap action – no preventDefault needed (just UI preview)
         if (side === 'left') {
-          // show brightness preview only (no change)
           clearTimeout(hudTimers['vsBrightness']);
           vsBright.classList.add('visible');
           hudTimers['vsBrightness'] = setTimeout(() => vsBright.classList.remove('visible'), 1000);
@@ -639,7 +643,7 @@
         const relX = t.clientX - rect.left;
         let zone = relX < rect.width / 3 ? 'left' : (relX > rect.width * 2 / 3 ? 'right' : 'center');
         if (zone === 'center') spawnTapCircle(t.clientX, t.clientY);
-        handleTap(zone, t.clientX, t.clientY);
+        handleTap(zone, t.clientX, t.clientY, e);
       }
       ts.active = false;
     });
@@ -700,7 +704,7 @@
         const relX = e.clientX - rect.left;
         let zone = relX < rect.width / 3 ? 'left' : (relX > rect.width * 2 / 3 ? 'right' : 'center');
         if (zone === 'center') spawnTapCircle(e.clientX, e.clientY);
-        handleTap(zone, e.clientX, e.clientY);
+        handleTap(zone, e.clientX, e.clientY, e);
       }
       ms.down = false;
     });
