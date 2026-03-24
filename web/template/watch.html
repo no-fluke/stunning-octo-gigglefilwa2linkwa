@@ -35,10 +35,11 @@
     ::-webkit-scrollbar-track { background: #0f0c29; }
     ::-webkit-scrollbar-thumb { background: var(--secondary-color); border-radius: 4px; }
 
+    /* ── Navbar ── */
     .navbar {
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0,0,0,0.6);
       backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
     }
     .navbar-brand {
       color: var(--primary-color) !important;
@@ -46,34 +47,50 @@
       letter-spacing: 1px;
     }
 
-    /* ══ Player Wrapper ══ */
+    /* ══════════════════════════════════
+       PLAYER WRAPPER
+    ══════════════════════════════════ */
     .player-wrapper {
       background: #000;
       border-radius: var(--card-radius);
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       margin-top: 20px;
       border: var(--glass-border);
       position: relative;
-      touch-action: none;
       user-select: none;
     }
 
+    /* Plyr theming */
     .plyr--video .plyr__control--overlaid,
     .plyr--video .plyr__control:hover { background: var(--secondary-color); }
-    .plyr--full-ui input[type=range] { color: var(--primary-color); }
+    .plyr--full-ui input[type=range]  { color: var(--primary-color); }
 
-    /* ══ Gesture Overlay ══ */
+    /* ══════════════════════════════════
+       GESTURE OVERLAY
+       — sits above the video but BELOW
+         the Plyr control bar so controls
+         remain fully clickable.
+       We use bottom: var(--plyr-bar-h)
+       and dynamically set it in JS after
+       Plyr renders.
+    ══════════════════════════════════ */
     #gestureOverlay {
       position: absolute;
-      inset: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 48px;   /* Plyr controls height — overridden in JS */
       z-index: 10;
       display: flex;
+      touch-action: none;
       pointer-events: all;
     }
     #gesturLeft, #gesturRight { flex: 1; height: 100%; }
 
-    /* ══ Vertical Slider Bar (brightness & volume) ══ */
+    /* ══════════════════════════════════
+       VERTICAL SLIDER BARS
+    ══════════════════════════════════ */
     .v-slider {
       position: absolute;
       top: 50%;
@@ -82,17 +99,21 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
       opacity: 0;
       transition: opacity 0.2s ease;
       pointer-events: none;
     }
-    .v-slider.left  { left: 10px; }
-    .v-slider.right { right: 10px; }
+    .v-slider.left  { left: 12px; }
+    .v-slider.right { right: 12px; }
     .v-slider.visible { opacity: 1; }
 
-    .v-slider-icon { font-size: 1rem; color: var(--primary-color); }
+    .v-slider-icon {
+      font-size: 0.9rem;
+      color: var(--primary-color);
+    }
 
+    /* Pill track — fill grows from bottom */
     .v-slider-track {
       width: 5px;
       height: 110px;
@@ -101,51 +122,56 @@
       position: relative;
       overflow: hidden;
     }
-    /* Fill grows from bottom */
     .v-slider-fill {
       position: absolute;
-      bottom: 0;
-      left: 0;
+      bottom: 0; left: 0;
       width: 100%;
       background: var(--primary-color);
       border-radius: 10px;
-      transition: height 0.07s linear;
+      transition: height 0.06s linear;
       box-shadow: 0 0 6px var(--primary-color);
     }
 
     .v-slider-val {
-      font-size: 0.68rem;
-      font-weight: 600;
+      font-size: 0.66rem;
+      font-weight: 700;
       color: #fff;
-      background: rgba(0,0,0,0.55);
+      background: rgba(0,0,0,0.6);
       border-radius: 6px;
       padding: 2px 5px;
+      min-width: 34px;
+      text-align: center;
     }
 
-    /* ══ Seek HUD (centre) ══ */
+    /* ══════════════════════════════════
+       SEEK HUD (centre)
+    ══════════════════════════════════ */
     #hudSeek {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       z-index: 25;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.65);
       backdrop-filter: blur(8px);
       border-radius: 14px;
-      padding: 10px 18px;
+      padding: 10px 16px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
+      min-width: 72px;
       opacity: 0;
       transition: opacity 0.2s ease;
       pointer-events: none;
     }
     #hudSeek.visible { opacity: 1; }
-    .seek-emoji { font-size: 1.8rem; line-height: 1; }
-    .seek-val   { font-size: 0.82rem; font-weight: 600; color: #fff; }
+    #hudSeek .seek-icon  { font-size: 1.3rem; color: var(--primary-color); }
+    #hudSeek .seek-val   { font-size: 0.82rem; font-weight: 700; color: #fff; }
 
-    /* ══ In-player skip zones ══ */
+    /* ══════════════════════════════════
+       IN-PLAYER SKIP ZONES (visual only)
+    ══════════════════════════════════ */
     .skip-zone {
       position: absolute;
       top: 0; bottom: 0;
@@ -154,7 +180,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      pointer-events: none; /* clicks flow through to overlay */
+      pointer-events: none;
     }
     .skip-zone.left-zone  { left: 0; }
     .skip-zone.right-zone { right: 0; }
@@ -165,53 +191,44 @@
       align-items: center;
       gap: 5px;
       opacity: 0;
-      transform: scale(0.6);
-      transition: opacity 0.15s ease, transform 0.15s ease;
+      transform: scale(0.65);
+      transition: opacity 0.14s ease, transform 0.14s ease;
     }
     .skip-ripple.pop {
       opacity: 1;
       transform: scale(1);
     }
     .skip-ripple i {
-      font-size: 2.4rem;
+      font-size: 2.2rem;
       color: rgba(255,255,255,0.92);
-      filter: drop-shadow(0 0 10px rgba(0,240,255,0.75));
+      filter: drop-shadow(0 0 10px rgba(0,240,255,0.7));
     }
     .skip-ripple span {
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       font-weight: 700;
-      color: rgba(255,255,255,0.88);
+      color: rgba(255,255,255,0.9);
       text-shadow: 0 1px 4px rgba(0,0,0,0.9);
-      letter-spacing: 0.5px;
     }
 
     /* Tap ripple circle */
     @keyframes rippleCircle {
-      0%   { transform: scale(0.2); opacity: 0.55; }
-      100% { transform: scale(2.6); opacity: 0; }
+      0%   { transform: scale(0.2); opacity: 0.5; }
+      100% { transform: scale(2.8); opacity: 0; }
     }
     .tap-circle {
       position: absolute;
       width: 60px;
       height: 60px;
       border-radius: 50%;
-      background: rgba(0,240,255,0.22);
+      background: rgba(0,240,255,0.2);
       pointer-events: none;
       z-index: 30;
       animation: rippleCircle 0.5s ease-out forwards;
     }
 
-    /* ══ Gesture hint ══ */
-    .gesture-hint {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.7rem;
-      color: #555;
-      padding: 4px 6px 0;
-    }
-    .gesture-hint span { display: flex; align-items: center; gap: 4px; }
-
-    /* ══ Buttons ══ */
+    /* ══════════════════════════════════
+       BUTTONS
+    ══════════════════════════════════ */
     .btn-custom {
       border: none;
       border-radius: 12px;
@@ -225,8 +242,7 @@
       text-transform: uppercase;
       font-size: 0.9rem;
       letter-spacing: 0.5px;
-      position: relative;
-      overflow: hidden;
+      cursor: pointer;
     }
     .btn-custom:hover {
       transform: translateY(-2px);
@@ -271,8 +287,8 @@
     footer a { color: var(--primary-color); text-decoration: none; }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity:0; transform: translateY(10px); }
+      to   { opacity:1; transform: translateY(0); }
     }
     main { animation: fadeIn 0.8s ease-out; }
 
@@ -290,26 +306,28 @@
 <body>
   <nav class="navbar navbar-dark">
     <div class="container">
-      <span class="navbar-brand mb-0 h1"><i class="fa-solid fa-robot me-2"></i>{{ template_ne }}</span>
+      <span class="navbar-brand mb-0 h1">
+        <i class="fa-solid fa-robot me-2"></i>{{ template_ne }}
+      </span>
     </div>
   </nav>
 
   <main class="container py-4">
 
-    <!-- Player -->
-    <div class="player-wrapper mb-1" id="playerWrapper">
+    <!-- ── Player ── -->
+    <div class="player-wrapper mb-3" id="playerWrapper">
 
       <video id="myVideo" src="{{file_url}}" class="w-100" controls>
         Your browser does not support the video tag.
       </video>
 
-      <!-- Transparent gesture overlay -->
+      <!-- Gesture overlay — covers video only, not Plyr control bar -->
       <div id="gestureOverlay">
         <div id="gesturLeft"></div>
         <div id="gesturRight"></div>
       </div>
 
-      <!-- Vertical Brightness bar — left edge -->
+      <!-- Brightness pill bar — left edge -->
       <div class="v-slider left" id="vsBrightness">
         <i class="fa-solid fa-sun v-slider-icon"></i>
         <div class="v-slider-track">
@@ -318,7 +336,7 @@
         <div class="v-slider-val" id="vsBrightnessVal">100%</div>
       </div>
 
-      <!-- Vertical Volume bar — right edge -->
+      <!-- Volume pill bar — right edge -->
       <div class="v-slider right" id="vsVolume">
         <i class="fa-solid fa-volume-high v-slider-icon" id="vsVolumeIcon"></i>
         <div class="v-slider-track">
@@ -327,34 +345,27 @@
         <div class="v-slider-val" id="vsVolumeVal">100%</div>
       </div>
 
-      <!-- Seek HUD -->
+      <!-- Seek HUD — centre -->
       <div id="hudSeek">
-        <div class="seek-emoji" id="hudSeekEmoji">⏩</div>
-        <div class="seek-val"   id="hudSeekVal">+10s</div>
+        <i class="fa-solid fa-forward seek-icon" id="hudSeekIcon"></i>
+        <div class="seek-val" id="hudSeekVal">+10s</div>
       </div>
 
-      <!-- In-player skip zones (visual feedback only) -->
+      <!-- Skip zones — visual feedback only -->
       <div class="skip-zone left-zone">
         <div class="skip-ripple" id="skipRippleLeft">
           <i class="fa-solid fa-rotate-left"></i>
-          <span>-10s</span>
+          <span id="skipLabelLeft">-10s</span>
         </div>
       </div>
       <div class="skip-zone right-zone">
         <div class="skip-ripple" id="skipRippleRight">
           <i class="fa-solid fa-rotate-right"></i>
-          <span>+10s</span>
+          <span id="skipLabelRight">+10s</span>
         </div>
       </div>
 
     </div><!-- /player-wrapper -->
-
-    <!-- Gesture hint -->
-    <div class="gesture-hint mb-3">
-      <span><i class="fa-solid fa-hand-point-up"></i> Swipe left ↕ Brightness</span>
-      <span><i class="fa-solid fa-left-right"></i> Swipe ↔ Seek</span>
-      <span>Swipe right ↕ Volume <i class="fa-solid fa-hand-point-up"></i></span>
-    </div>
 
     <!-- External Players -->
     <div class="d-flex flex-wrap gap-2 mb-3">
@@ -405,282 +416,354 @@
 
   <script src="https://cdn.plyr.io/3.6.12/plyr.js"></script>
   <script>
-    /* ── Plyr init ── */
-    let player;
-    document.addEventListener("DOMContentLoaded", () => {
-      player = new Plyr("#myVideo", {
-        controls: ['play-large','play','progress','current-time','mute','volume',
-                   'captions','settings','pip','airplay','fullscreen'],
-        settings: ['captions','quality','speed']
-      });
+  /* ═══════════════════════════════════════
+     PLYR INIT
+  ═══════════════════════════════════════ */
+  let player;
+  document.addEventListener("DOMContentLoaded", () => {
+    player = new Plyr("#myVideo", {
+      controls: ['play-large','play','progress','current-time',
+                 'mute','volume','captions','settings','pip','airplay','fullscreen'],
+      settings: ['captions','quality','speed']
     });
 
-    /* ── Refs ── */
-    const video        = document.getElementById('myVideo');
-    const overlay      = document.getElementById('gestureOverlay');
-    const wrapper      = document.getElementById('playerWrapper');
-    const vsBright     = document.getElementById('vsBrightness');
-    const vsBrightBar  = document.getElementById('vsBrightnessBar');
-    const vsBrightVal  = document.getElementById('vsBrightnessVal');
-    const vsVol        = document.getElementById('vsVolume');
-    const vsVolBar     = document.getElementById('vsVolumeBar');
-    const vsVolVal     = document.getElementById('vsVolumeVal');
-    const vsVolIcon    = document.getElementById('vsVolumeIcon');
-    const hudSeek      = document.getElementById('hudSeek');
-    const hudSeekEmoji = document.getElementById('hudSeekEmoji');
-    const hudSeekVal   = document.getElementById('hudSeekVal');
-    const rippleLeft   = document.getElementById('skipRippleLeft');
-    const rippleRight  = document.getElementById('skipRippleRight');
-
-    /* ── State ── */
-    let brightness = 1.0;
-    let volume     = 1.0;
-    let hudTimers  = {};
-
-    /* ── HUD helpers ── */
-    function showEl(el, ms = 1500) {
-      el.classList.add('visible');
-      clearTimeout(hudTimers[el.id]);
-      hudTimers[el.id] = setTimeout(() => el.classList.remove('visible'), ms);
-    }
-
-    function updateBrightness() {
-      const pct = Math.round(((brightness - 0.1) / 1.9) * 100);
-      vsBrightBar.style.height = pct + '%';
-      vsBrightVal.textContent  = Math.round(brightness * 100) + '%';
-      video.style.filter       = `brightness(${brightness})`;
-      showEl(vsBright);
-    }
-
-    function updateVolume() {
-      const pct = Math.round(volume * 100);
-      vsVolBar.style.height  = pct + '%';
-      vsVolVal.textContent   = pct + '%';
-      vsVolIcon.className    = volume === 0
-        ? 'fa-solid fa-volume-xmark v-slider-icon'
-        : volume < 0.5
-          ? 'fa-solid fa-volume-low v-slider-icon'
-          : 'fa-solid fa-volume-high v-slider-icon';
-      video.volume = volume;
-      showEl(vsVol);
-    }
-
-    function updateSeekHud(delta) {
-      hudSeekEmoji.textContent = delta >= 0 ? '⏩' : '⏪';
-      hudSeekVal.textContent   = (delta >= 0 ? '+' : '') + Math.round(delta) + 's';
-      showEl(hudSeek, 800);
-    }
-
-    /* ── Skip ripple flash ── */
-    let rippleTimers = {};
-    function flashRipple(ripple) {
-      ripple.classList.remove('pop');
-      void ripple.offsetWidth;
-      ripple.classList.add('pop');
-      clearTimeout(rippleTimers[ripple.id]);
-      rippleTimers[ripple.id] = setTimeout(() => ripple.classList.remove('pop'), 600);
-    }
-
-    /* ── Tap circle ── */
-    function spawnTapCircle(clientX, clientY) {
-      const rect = wrapper.getBoundingClientRect();
-      const c = document.createElement('div');
-      c.className = 'tap-circle';
-      c.style.left = (clientX - rect.left - 30) + 'px';
-      c.style.top  = (clientY - rect.top  - 30) + 'px';
-      wrapper.appendChild(c);
-      setTimeout(() => c.remove(), 600);
-    }
-
-    /* ── Gesture constants ── */
-    const SWIPE_MIN    = 10;
-    const BRIGHT_SENS  = 0.006;
-    const VOL_SENS     = 0.006;
-    const SEEK_SENS    = 0.18;
-
-    /* ════════════════════════════
-       TOUCH
-    ════════════════════════════ */
-    let ts = { active:false, side:null, dir:null,
-               startX:0, startY:0, lastX:0, lastY:0, moved:false };
-
-    overlay.addEventListener('touchstart', (e) => {
-      const t    = e.touches[0];
-      const rect = overlay.getBoundingClientRect();
-      ts = {
-        active: true,
-        side:   (t.clientX - rect.left) < rect.width / 2 ? 'left' : 'right',
-        dir:    null,
-        startX: t.clientX, startY: t.clientY,
-        lastX:  t.clientX, lastY:  t.clientY,
-        moved:  false,
-      };
-    }, { passive: true });
-
-    overlay.addEventListener('touchmove', (e) => {
-      if (!ts.active) return;
-      const t  = e.touches[0];
-      const dx = t.clientX - ts.startX;
-      const dy = t.clientY - ts.startY;
-
-      if (!ts.dir) {
-        if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return;
-        ts.dir   = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
-        ts.moved = true;
+    /* After Plyr renders, measure its control bar and
+       shrink the overlay so controls stay clickable */
+    setTimeout(() => {
+      const controls = document.querySelector('.plyr__controls');
+      if (controls) {
+        const h = controls.offsetHeight || 48;
+        document.getElementById('gestureOverlay').style.bottom = h + 'px';
       }
+    }, 300);
+  });
 
-      const dmx = t.clientX - ts.lastX;
-      const dmy = t.clientY - ts.lastY;
-      ts.lastX = t.clientX;
-      ts.lastY = t.clientY;
+  /* ═══════════════════════════════════════
+     ELEMENT REFS
+  ═══════════════════════════════════════ */
+  const video         = document.getElementById('myVideo');
+  const overlay       = document.getElementById('gestureOverlay');
+  const wrapper       = document.getElementById('playerWrapper');
+  const vsBright      = document.getElementById('vsBrightness');
+  const vsBrightBar   = document.getElementById('vsBrightnessBar');
+  const vsBrightVal   = document.getElementById('vsBrightnessVal');
+  const vsVol         = document.getElementById('vsVolume');
+  const vsVolBar      = document.getElementById('vsVolumeBar');
+  const vsVolVal      = document.getElementById('vsVolumeVal');
+  const vsVolIcon     = document.getElementById('vsVolumeIcon');
+  const hudSeek       = document.getElementById('hudSeek');
+  const hudSeekIcon   = document.getElementById('hudSeekIcon');
+  const hudSeekVal    = document.getElementById('hudSeekVal');
+  const rippleLeft    = document.getElementById('skipRippleLeft');
+  const rippleRight   = document.getElementById('skipRippleRight');
+  const skipLblLeft   = document.getElementById('skipLabelLeft');
+  const skipLblRight  = document.getElementById('skipLabelRight');
 
-      if (ts.dir === 'vertical') {
-        const delta = -dmy;
-        if (ts.side === 'left') {
-          brightness = Math.min(2.0, Math.max(0.1, brightness + delta * BRIGHT_SENS));
-          updateBrightness();
-        } else {
-          volume = Math.min(1.0, Math.max(0, volume + delta * VOL_SENS));
-          updateVolume();
-        }
-        e.preventDefault();
+  /* ═══════════════════════════════════════
+     STATE
+  ═══════════════════════════════════════ */
+  let brightness  = 1.0;   // 0.1 – 2.0
+  let volLevel    = 1.0;   // 0 – 1
+  let hudTimers   = {};
+
+  /* Multi-tap skip accumulation */
+  let skipAccLeft  = 0;   // accumulated seconds for left zone
+  let skipAccRight = 0;
+  let skipTimerLeft  = null;
+  let skipTimerRight = null;
+
+  /* ═══════════════════════════════════════
+     HUD HELPERS
+  ═══════════════════════════════════════ */
+  function showEl(el, ms) {
+    el.classList.add('visible');
+    clearTimeout(hudTimers[el.id]);
+    hudTimers[el.id] = setTimeout(() => el.classList.remove('visible'), ms || 1400);
+  }
+
+  function updateBrightness() {
+    const pct = Math.round(((brightness - 0.1) / 1.9) * 100);
+    vsBrightBar.style.height = pct + '%';
+    vsBrightVal.textContent  = Math.round(brightness * 100) + '%';
+    video.style.filter       = `brightness(${brightness})`;
+    showEl(vsBright, 1400);
+  }
+
+  function updateVolume() {
+    const pct = Math.round(volLevel * 100);
+    vsVolBar.style.height = pct + '%';
+    vsVolVal.textContent  = pct + '%';
+    vsVolIcon.className   =
+      volLevel === 0  ? 'fa-solid fa-volume-xmark v-slider-icon' :
+      volLevel < 0.5  ? 'fa-solid fa-volume-low v-slider-icon'   :
+                        'fa-solid fa-volume-high v-slider-icon';
+    video.volume = volLevel;
+    showEl(vsVol, 1400);
+  }
+
+  function showSeekHud(secs) {
+    const fwd = secs >= 0;
+    hudSeekIcon.className = fwd
+      ? 'fa-solid fa-forward seek-icon'
+      : 'fa-solid fa-backward seek-icon';
+    hudSeekVal.textContent = (fwd ? '+' : '') + Math.round(secs) + 's';
+    showEl(hudSeek, 800);
+  }
+
+  /* ═══════════════════════════════════════
+     SKIP RIPPLE FLASH
+  ═══════════════════════════════════════ */
+  let rippleTimers = {};
+  function flashRipple(ripple) {
+    ripple.classList.remove('pop');
+    void ripple.offsetWidth;
+    ripple.classList.add('pop');
+    clearTimeout(rippleTimers[ripple.id]);
+    rippleTimers[ripple.id] = setTimeout(() => ripple.classList.remove('pop'), 700);
+  }
+
+  /* ═══════════════════════════════════════
+     TAP CIRCLE
+  ═══════════════════════════════════════ */
+  function spawnTapCircle(clientX, clientY) {
+    const rect = wrapper.getBoundingClientRect();
+    const c = document.createElement('div');
+    c.className = 'tap-circle';
+    c.style.left = (clientX - rect.left - 30) + 'px';
+    c.style.top  = (clientY - rect.top  - 30) + 'px';
+    wrapper.appendChild(c);
+    setTimeout(() => c.remove(), 600);
+  }
+
+  /* ═══════════════════════════════════════
+     MULTI-TAP SKIP
+     Rapid taps accumulate: +10, +20, +30…
+     Committed 600ms after last tap.
+  ═══════════════════════════════════════ */
+  function handleSkipTap(side, clientX, clientY) {
+    spawnTapCircle(clientX, clientY);
+
+    if (side === 'left') {
+      skipAccLeft -= 10;
+      skipLblLeft.textContent  = skipAccLeft + 's';
+      flashRipple(rippleLeft);
+      showSeekHud(skipAccLeft);
+      clearTimeout(skipTimerLeft);
+      skipTimerLeft = setTimeout(() => {
+        video.currentTime = Math.max(0, video.currentTime + skipAccLeft);
+        skipAccLeft = 0;
+        skipLblLeft.textContent = '-10s';
+      }, 600);
+    } else {
+      skipAccRight += 10;
+      skipLblRight.textContent = '+' + skipAccRight + 's';
+      flashRipple(rippleRight);
+      showSeekHud(skipAccRight);
+      clearTimeout(skipTimerRight);
+      skipTimerRight = setTimeout(() => {
+        video.currentTime = Math.min(video.duration || Infinity, video.currentTime + skipAccRight);
+        skipAccRight = 0;
+        skipLblRight.textContent = '+10s';
+      }, 600);
+    }
+  }
+
+  /* ═══════════════════════════════════════
+     GESTURE CONSTANTS
+  ═══════════════════════════════════════ */
+  const SWIPE_MIN   = 12;    // px to lock direction
+  const BRIGHT_SENS = 0.007;
+  const VOL_SENS    = 0.007;
+  const SEEK_SENS   = 0.25;  // seconds per px (total delta from start)
+
+  /* ═══════════════════════════════════════
+     TOUCH GESTURES
+  ═══════════════════════════════════════ */
+  let ts = {
+    active:false, side:null, dir:null,
+    startX:0, startY:0, lastX:0, lastY:0,
+    seekStart:0,      // video.currentTime when swipe began
+    moved:false
+  };
+
+  overlay.addEventListener('touchstart', (e) => {
+    const t    = e.touches[0];
+    const rect = overlay.getBoundingClientRect();
+    ts = {
+      active:   true,
+      side:     (t.clientX - rect.left) < rect.width / 2 ? 'left' : 'right',
+      dir:      null,
+      startX:   t.clientX,
+      startY:   t.clientY,
+      lastX:    t.clientX,
+      lastY:    t.clientY,
+      seekStart: isNaN(video.currentTime) ? 0 : video.currentTime,
+      moved:    false,
+    };
+  }, { passive: true });
+
+  overlay.addEventListener('touchmove', (e) => {
+    if (!ts.active) return;
+    const t  = e.touches[0];
+    const dx = t.clientX - ts.startX;
+    const dy = t.clientY - ts.startY;
+
+    /* Lock gesture direction once threshold passed */
+    if (!ts.dir) {
+      if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return;
+      ts.dir   = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
+      ts.moved = true;
+    }
+
+    if (ts.dir === 'vertical') {
+      /* Use delta from last frame for smooth incremental update */
+      const dmy   = t.clientY - ts.lastY;
+      const delta = -dmy;
+      if (ts.side === 'left') {
+        brightness = Math.min(2.0, Math.max(0.1, brightness + delta * BRIGHT_SENS));
+        updateBrightness();
       } else {
-        const sd = dmx * SEEK_SENS;
-        if (!isNaN(video.duration)) {
-          video.currentTime = Math.min(video.duration, Math.max(0, video.currentTime + sd));
-          updateSeekHud(sd);
-        }
-        e.preventDefault();
+        volLevel = Math.min(1.0, Math.max(0, volLevel + delta * VOL_SENS));
+        updateVolume();
       }
-    }, { passive: false });
+      e.preventDefault();
 
-    overlay.addEventListener('touchend', (e) => {
-      if (!ts.moved) {
-        const t    = e.changedTouches[0];
-        const rect = overlay.getBoundingClientRect();
-        const relX = t.clientX - rect.left;
-        const zone = relX < rect.width / 3 ? 'left'
-                   : relX > rect.width * 2 / 3 ? 'right'
-                   : 'center';
+    } else {
+      /* SEEK: use TOTAL delta from start so position is stable */
+      if (!isNaN(video.duration)) {
+        const newTime = ts.seekStart + dx * SEEK_SENS;
+        video.currentTime = Math.min(video.duration, Math.max(0, newTime));
+        showSeekHud(dx * SEEK_SENS);
+      }
+      e.preventDefault();
+    }
 
+    ts.lastX = t.clientX;
+    ts.lastY = t.clientY;
+  }, { passive: false });
+
+  overlay.addEventListener('touchend', (e) => {
+    if (!ts.moved) {
+      /* It's a tap — determine zone */
+      const t    = e.changedTouches[0];
+      const rect = overlay.getBoundingClientRect();
+      const relX = t.clientX - rect.left;
+      const zone =
+        relX < rect.width / 3       ? 'left' :
+        relX > rect.width * 2 / 3   ? 'right' :
+                                       'center';
+
+      if      (zone === 'left')   handleSkipTap('left',  t.clientX, t.clientY);
+      else if (zone === 'right')  handleSkipTap('right', t.clientX, t.clientY);
+      else {
         spawnTapCircle(t.clientX, t.clientY);
-
-        if (zone === 'left') {
-          video.currentTime = Math.max(0, video.currentTime - 10);
-          flashRipple(rippleLeft);
-          updateSeekHud(-10);
-        } else if (zone === 'right') {
-          video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
-          flashRipple(rippleRight);
-          updateSeekHud(10);
-        } else {
-          video.paused ? video.play() : video.pause();
-        }
+        video.paused ? video.play() : video.pause();
       }
-      ts.active = false;
-    });
+    }
+    ts.active = false;
+  });
 
-    /* ════════════════════════════
-       MOUSE (desktop)
-    ════════════════════════════ */
-    let ms = { down:false, side:null, dir:null,
-               startX:0, startY:0, lastX:0, lastY:0, moved:false };
+  /* ═══════════════════════════════════════
+     MOUSE GESTURES (desktop)
+  ═══════════════════════════════════════ */
+  let ms2 = {
+    down:false, side:null, dir:null,
+    startX:0, startY:0, lastX:0, lastY:0,
+    seekStart:0, moved:false
+  };
 
-    overlay.addEventListener('mousedown', (e) => {
+  overlay.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const rect = overlay.getBoundingClientRect();
+    ms2 = {
+      down:   true,
+      side:   (e.clientX - rect.left) < rect.width / 2 ? 'left' : 'right',
+      dir:    null,
+      startX: e.clientX, startY: e.clientY,
+      lastX:  e.clientX, lastY:  e.clientY,
+      seekStart: isNaN(video.currentTime) ? 0 : video.currentTime,
+      moved:  false,
+    };
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!ms2.down) return;
+    const dx = e.clientX - ms2.startX;
+    const dy = e.clientY - ms2.startY;
+
+    if (!ms2.dir) {
+      if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return;
+      ms2.dir   = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
+      ms2.moved = true;
+    }
+
+    if (ms2.dir === 'vertical') {
+      const dmy   = e.clientY - ms2.lastY;
+      const delta = -dmy;
+      if (ms2.side === 'left') {
+        brightness = Math.min(2.0, Math.max(0.1, brightness + delta * BRIGHT_SENS));
+        updateBrightness();
+      } else {
+        volLevel = Math.min(1.0, Math.max(0, volLevel + delta * VOL_SENS));
+        updateVolume();
+      }
+    } else {
+      if (!isNaN(video.duration)) {
+        const newTime = ms2.seekStart + dx * SEEK_SENS;
+        video.currentTime = Math.min(video.duration, Math.max(0, newTime));
+        showSeekHud(dx * SEEK_SENS);
+      }
+    }
+
+    ms2.lastX = e.clientX;
+    ms2.lastY = e.clientY;
+  });
+
+  overlay.addEventListener('mouseup', (e) => {
+    if (!ms2.moved) {
       const rect = overlay.getBoundingClientRect();
-      ms = {
-        down:  true,
-        side:  (e.clientX - rect.left) < rect.width / 2 ? 'left' : 'right',
-        dir:   null,
-        startX: e.clientX, startY: e.clientY,
-        lastX:  e.clientX, lastY:  e.clientY,
-        moved:  false,
-      };
-    });
+      const relX = e.clientX - rect.left;
+      const zone =
+        relX < rect.width / 3       ? 'left' :
+        relX > rect.width * 2 / 3   ? 'right' :
+                                       'center';
 
-    window.addEventListener('mousemove', (e) => {
-      if (!ms.down) return;
-      const dx = e.clientX - ms.startX;
-      const dy = e.clientY - ms.startY;
-
-      if (!ms.dir) {
-        if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return;
-        ms.dir   = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
-        ms.moved = true;
-      }
-
-      const dmx = e.clientX - ms.lastX;
-      const dmy = e.clientY - ms.lastY;
-      ms.lastX = e.clientX;
-      ms.lastY = e.clientY;
-
-      if (ms.dir === 'vertical') {
-        const delta = -dmy;
-        if (ms.side === 'left') {
-          brightness = Math.min(2.0, Math.max(0.1, brightness + delta * BRIGHT_SENS));
-          updateBrightness();
-        } else {
-          volume = Math.min(1.0, Math.max(0, volume + delta * VOL_SENS));
-          updateVolume();
-        }
-      } else {
-        const sd = dmx * SEEK_SENS;
-        if (!isNaN(video.duration)) {
-          video.currentTime = Math.min(video.duration, Math.max(0, video.currentTime + sd));
-          updateSeekHud(sd);
-        }
-      }
-    });
-
-    overlay.addEventListener('mouseup', (e) => {
-      if (!ms.moved) {
-        const rect = overlay.getBoundingClientRect();
-        const relX = e.clientX - rect.left;
-        const zone = relX < rect.width / 3 ? 'left'
-                   : relX > rect.width * 2 / 3 ? 'right'
-                   : 'center';
-
+      if      (zone === 'left')  handleSkipTap('left',  e.clientX, e.clientY);
+      else if (zone === 'right') handleSkipTap('right', e.clientX, e.clientY);
+      else {
         spawnTapCircle(e.clientX, e.clientY);
-
-        if (zone === 'left') {
-          video.currentTime = Math.max(0, video.currentTime - 10);
-          flashRipple(rippleLeft);
-          updateSeekHud(-10);
-        } else if (zone === 'right') {
-          video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
-          flashRipple(rippleRight);
-          updateSeekHud(10);
-        } else {
-          video.paused ? video.play() : video.pause();
-        }
-      }
-    });
-
-    window.addEventListener('mouseup', () => { ms.down = false; ms.moved = false; });
-
-    /* ── External players ── */
-    function mx_player() {
-      let c = "{{ file_url }}".replace(/^https?:\/\//, '');
-      window.location.href = `intent://${c}#Intent;package=com.mxtech.videoplayer.ad;type=video/*;scheme=https;end`;
-    }
-    function vlc_player() {
-      let c = "{{ file_url }}".replace(/^https?:\/\//, '');
-      window.location.href = `intent://${c}#Intent;package=org.videolan.vlc;type=video/*;scheme=https;end`;
-    }
-    function playit_player() {
-      let c = "{{ file_url }}".replace(/^https?:\/\//, '');
-      window.location.href = `intent://${c}#Intent;package=com.playit.videoplayer;type=video/*;scheme=https;end`;
-    }
-    function streamDownload()      { window.location.href = "{{ file_url }}"; }
-    function showLinkModal(url)    { if (url) window.open(url, "_blank"); }
-    function shareButton() {
-      if (navigator.share) {
-        navigator.share({ title:'{{ file_name }}', text:"Watch on {{ template_ne }}", url: window.location.href });
-      } else {
-        navigator.clipboard.writeText(window.location.href);
-        alert("Link copied!");
+        video.paused ? video.play() : video.pause();
       }
     }
+  });
+
+  window.addEventListener('mouseup', () => { ms2.down = false; ms2.moved = false; });
+
+  /* ═══════════════════════════════════════
+     EXTERNAL PLAYERS
+  ═══════════════════════════════════════ */
+  function mx_player() {
+    let c = "{{ file_url }}".replace(/^https?:\/\//, '');
+    window.location.href = `intent://${c}#Intent;package=com.mxtech.videoplayer.ad;type=video/*;scheme=https;end`;
+  }
+  function vlc_player() {
+    let c = "{{ file_url }}".replace(/^https?:\/\//, '');
+    window.location.href = `intent://${c}#Intent;package=org.videolan.vlc;type=video/*;scheme=https;end`;
+  }
+  function playit_player() {
+    let c = "{{ file_url }}".replace(/^https?:\/\//, '');
+    window.location.href = `intent://${c}#Intent;package=com.playit.videoplayer;type=video/*;scheme=https;end`;
+  }
+  function streamDownload()   { window.location.href = "{{ file_url }}"; }
+  function showLinkModal(url) { if (url) window.open(url, "_blank"); }
+  function shareButton() {
+    if (navigator.share) {
+      navigator.share({ title:'{{ file_name }}', text:"Watch on {{ template_ne }}", url: window.location.href });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert("Link copied!");
+    }
+  }
   </script>
 
   <div class="watermark">RexBots</div>
