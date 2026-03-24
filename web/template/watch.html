@@ -61,7 +61,6 @@
     .plyr--video .plyr__control:hover { background: var(--secondary-color); }
     .plyr--full-ui input[type=range]  { color: var(--primary-color); }
 
-    /* Plyr container must be relative for absolute children */
     .plyr {
       position: relative !important;
     }
@@ -72,7 +71,7 @@
       top: 0;
       left: 0;
       right: 0;
-      bottom: 48px;   /* will be updated by JS */
+      bottom: 48px;
       z-index: 10;
       display: flex;
       touch-action: none;
@@ -210,7 +209,6 @@
       animation: rippleCircle 0.5s ease-out forwards;
     }
 
-    /* Buttons etc. unchanged */
     .btn-custom {
       border: none;
       border-radius: 12px;
@@ -301,7 +299,6 @@
         Your browser does not support the video tag.
       </video>
 
-      <!-- All interactive UI elements are moved inside .plyr dynamically -->
       <div id="gestureOverlay">
         <div id="gesturLeft"></div>
         <div id="gesturRight"></div>
@@ -385,7 +382,6 @@
       }
     }
 
-    // ResizeObserver to catch control bar height changes (especially after fullscreen)
     let controlObserver;
     function observeControls() {
       const controls = document.querySelector('.plyr__controls');
@@ -395,6 +391,47 @@
         controlObserver.observe(controls);
       }
     }
+
+    // ========== PLYR SETTINGS MENU GUARD ==========
+    // Watches the settings menu container; when it opens, disables the gesture
+    // overlay so clicks reach Plyr's speed/quality/captions controls unobstructed.
+    let settingsMenuObserver;
+    function watchSettingsMenu() {
+      const menuContainer = document.querySelector('.plyr__menu__container');
+      if (!menuContainer) return;
+
+      settingsMenuObserver = new MutationObserver(() => {
+        const isOpen = menuContainer.getAttribute('aria-hidden') === 'false';
+        gestureOverlay.style.pointerEvents = isOpen ? 'none' : 'all';
+      });
+
+      settingsMenuObserver.observe(menuContainer, {
+        attributes: true,
+        attributeFilter: ['aria-hidden']
+      });
+
+      // Also handle the settings button click directly as a fallback
+      const settingsBtn = document.querySelector('[data-plyr="settings"]');
+      if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+          // Give Plyr a tick to update aria-hidden, then re-check
+          setTimeout(() => {
+            const isOpen = menuContainer.getAttribute('aria-hidden') === 'false';
+            gestureOverlay.style.pointerEvents = isOpen ? 'none' : 'all';
+          }, 50);
+        });
+      }
+    }
+
+    // Close gesture overlay lock whenever user clicks anywhere outside the menu
+    document.addEventListener('click', (e) => {
+      const menuContainer = document.querySelector('.plyr__menu__container');
+      if (!menuContainer) return;
+      const isOpen = menuContainer.getAttribute('aria-hidden') === 'false';
+      if (!isOpen) {
+        gestureOverlay.style.pointerEvents = 'all';
+      }
+    });
 
     document.addEventListener("DOMContentLoaded", () => {
       player = new Plyr("#myVideo", {
@@ -406,10 +443,22 @@
         if (moveElementsToPlyrContainer()) {
           updateOverlayBottom();
           observeControls();
+          watchSettingsMenu(); // <-- settings menu guard starts here
         }
-        player.on('fullscreenchange', () => setTimeout(updateOverlayBottom, 100));
+        player.on('fullscreenchange', () => {
+          setTimeout(() => {
+            updateOverlayBottom();
+            // Re-attach observer after fullscreen DOM changes
+            watchSettingsMenu();
+          }, 200);
+        });
         window.addEventListener('resize', () => setTimeout(updateOverlayBottom, 50));
-        document.addEventListener('fullscreenchange', () => setTimeout(updateOverlayBottom, 100));
+        document.addEventListener('fullscreenchange', () => {
+          setTimeout(() => {
+            updateOverlayBottom();
+            watchSettingsMenu();
+          }, 200);
+        });
       }, 300);
     });
 
@@ -427,8 +476,8 @@
     const skipLblRight = document.getElementById('skipLabelRight');
 
     // ========== STATE ==========
-    let brightness = 1.0;   // 0.1 – 2.0
-    let volLevel = 1.0;     // 0 – 1
+    let brightness = 1.0;
+    let volLevel = 1.0;
     let hudTimers = {};
 
     // ========== UI HELPERS ==========
@@ -471,7 +520,7 @@
       hudTimers[ripple.id] = setTimeout(() => ripple.classList.remove('pop'), 700);
     }
 
-    // ========== DOUBLE‑TAP SEEK ACCUMULATOR (per side) ==========
+    // ========== DOUBLE-TAP SEEK ACCUMULATOR (per side) ==========
     let leftAccum = 0, rightAccum = 0;
     let leftCommitTimer = null, rightCommitTimer = null;
 
@@ -513,28 +562,24 @@
       }
     }
 
-    // ========== TAP / DOUBLE-TAP LOGIC with default prevention ==========
+    // ========== TAP / DOUBLE-TAP LOGIC ==========
     const DOUBLE_TAP_DELAY = 280;
     let lastTap = { side: null, time: 0, pendingSingle: null };
 
     function handleTap(side, clientX, clientY, event) {
       const now = Date.now();
-      // Double‑tap on same side?
       if (lastTap.side === side && (now - lastTap.time) < DOUBLE_TAP_DELAY) {
-        // Cancel pending single tap
         if (lastTap.pendingSingle) {
           clearTimeout(lastTap.pendingSingle);
           lastTap.pendingSingle = null;
         }
-        // Prevent default browser behavior (zoom, fullscreen, etc.)
         if (event) {
           event.preventDefault();
           event.stopPropagation();
         }
-        // Double‑tap action
         if (side === 'left') accumulateSkip('left', -10);
         else if (side === 'right') accumulateSkip('right', +10);
-        else { // center -> play/pause
+        else {
           video.paused ? video.play() : video.pause();
           spawnTapCircle(clientX, clientY);
         }
@@ -542,10 +587,8 @@
         return;
       }
 
-      // Single tap: schedule preview after delay (unless double‑tap cancels)
       if (lastTap.pendingSingle) clearTimeout(lastTap.pendingSingle);
       lastTap = { side: side, time: now, pendingSingle: setTimeout(() => {
-        // Single tap action – no preventDefault needed (just UI preview)
         if (side === 'left') {
           clearTimeout(hudTimers['vsBrightness']);
           vsBright.classList.add('visible');
@@ -554,7 +597,7 @@
           clearTimeout(hudTimers['vsVolume']);
           vsVol.classList.add('visible');
           hudTimers['vsVolume'] = setTimeout(() => vsVol.classList.remove('visible'), 1000);
-        } else { // center
+        } else {
           video.paused ? video.play() : video.pause();
           spawnTapCircle(clientX, clientY);
         }
@@ -710,7 +753,7 @@
     });
     window.addEventListener('mouseup', () => { ms.down = false; });
 
-    // ========== EXTERNAL FUNCTIONS (unchanged) ==========
+    // ========== EXTERNAL FUNCTIONS ==========
     function mx_player() { let c = "{{ file_url }}".replace(/^https?:\/\//, ''); window.location.href = `intent://${c}#Intent;package=com.mxtech.videoplayer.ad;type=video/*;scheme=https;end`; }
     function vlc_player() { let c = "{{ file_url }}".replace(/^https?:\/\//, ''); window.location.href = `intent://${c}#Intent;package=org.videolan.vlc;type=video/*;scheme=https;end`; }
     function playit_player() { let c = "{{ file_url }}".replace(/^https?:\/\//, ''); window.location.href = `intent://${c}#Intent;package=com.playit.videoplayer;type=video/*;scheme=https;end`; }
