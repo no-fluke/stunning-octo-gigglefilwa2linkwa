@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <title>{{ template_ne }} | {{ file_name }}</title>
   <link rel="icon" href="https://telegra.ph/file/5a53e66bb148003666d62.jpg" type="image/x-icon">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
@@ -73,14 +73,14 @@
          remain fully clickable.
        We use bottom: var(--plyr-bar-h)
        and dynamically set it in JS after
-       Plyr renders.
+       Plyr renders + fullscreen changes.
     ══════════════════════════════════ */
     #gestureOverlay {
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      bottom: 48px;   /* Plyr controls height — overridden in JS */
+      bottom: 48px;   /* fallback, updated by JS */
       z-index: 10;
       display: flex;
       touch-action: none;
@@ -417,9 +417,26 @@
   <script src="https://cdn.plyr.io/3.6.12/plyr.js"></script>
   <script>
   /* ═══════════════════════════════════════
-     PLYR INIT
+     PLYR INIT + FULLSCREEN FIX
   ═══════════════════════════════════════ */
   let player;
+  const video = document.getElementById('myVideo');
+  const wrapper = document.getElementById('playerWrapper');
+  const gestureOverlay = document.getElementById('gestureOverlay');
+
+  function updateOverlayBottom() {
+    setTimeout(() => {
+      const controls = document.querySelector('.plyr__controls');
+      if (controls) {
+        let h = controls.offsetHeight;
+        if (h === 0) h = 48; // fallback
+        gestureOverlay.style.bottom = h + 'px';
+      } else {
+        gestureOverlay.style.bottom = '48px';
+      }
+    }, 80);
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     player = new Plyr("#myVideo", {
       controls: ['play-large','play','progress','current-time',
@@ -427,23 +444,17 @@
       settings: ['captions','quality','speed']
     });
 
-    /* After Plyr renders, measure its control bar and
-       shrink the overlay so controls stay clickable */
-    setTimeout(() => {
-      const controls = document.querySelector('.plyr__controls');
-      if (controls) {
-        const h = controls.offsetHeight || 48;
-        document.getElementById('gestureOverlay').style.bottom = h + 'px';
-      }
-    }, 300);
+    // Initial adjustment after Plyr renders
+    setTimeout(updateOverlayBottom, 300);
+    // Update on fullscreen changes (Plyr event + native)
+    player.on('fullscreenchange', () => updateOverlayBottom());
+    window.addEventListener('resize', () => updateOverlayBottom());
+    document.addEventListener('fullscreenchange', () => updateOverlayBottom());
   });
 
   /* ═══════════════════════════════════════
      ELEMENT REFS
   ═══════════════════════════════════════ */
-  const video         = document.getElementById('myVideo');
-  const overlay       = document.getElementById('gestureOverlay');
-  const wrapper       = document.getElementById('playerWrapper');
   const vsBright      = document.getElementById('vsBrightness');
   const vsBrightBar   = document.getElementById('vsBrightnessBar');
   const vsBrightVal   = document.getElementById('vsBrightnessVal');
@@ -466,11 +477,23 @@
   let volLevel    = 1.0;   // 0 – 1
   let hudTimers   = {};
 
-  /* Multi-tap skip accumulation */
-  let skipAccLeft  = 0;   // accumulated seconds for left zone
-  let skipAccRight = 0;
-  let skipTimerLeft  = null;
-  let skipTimerRight = null;
+  /* Double‑tap skip accumulators */
+  let doubleTapLeftAcc  = 0;
+  let doubleTapRightAcc = 0;
+  let commitLeftTimer   = null;
+  let commitRightTimer  = null;
+
+  /* Single tap preview timers (show brightness/volume pill without change) */
+  function showBrightnessPreview() {
+    clearTimeout(hudTimers['vsBrightness']);
+    vsBright.classList.add('visible');
+    hudTimers['vsBrightness'] = setTimeout(() => vsBright.classList.remove('visible'), 1000);
+  }
+  function showVolumePreview() {
+    clearTimeout(hudTimers['vsVolume']);
+    vsVol.classList.add('visible');
+    hudTimers['vsVolume'] = setTimeout(() => vsVol.classList.remove('visible'), 1000);
+  }
 
   /* ═══════════════════════════════════════
      HUD HELPERS
@@ -511,19 +534,56 @@
   }
 
   /* ═══════════════════════════════════════
-     SKIP RIPPLE FLASH
+     SKIP ACCUMULATION (triggered by double‑tap)
   ═══════════════════════════════════════ */
-  let rippleTimers = {};
   function flashRipple(ripple) {
     ripple.classList.remove('pop');
     void ripple.offsetWidth;
     ripple.classList.add('pop');
-    clearTimeout(rippleTimers[ripple.id]);
-    rippleTimers[ripple.id] = setTimeout(() => ripple.classList.remove('pop'), 700);
+    clearTimeout(hudTimers[ripple.id]);
+    hudTimers[ripple.id] = setTimeout(() => ripple.classList.remove('pop'), 700);
+  }
+
+  function commitLeftSkip() {
+    if (doubleTapLeftAcc !== 0 && !isNaN(video.duration)) {
+      video.currentTime = Math.max(0, video.currentTime + doubleTapLeftAcc);
+      doubleTapLeftAcc = 0;
+      skipLblLeft.textContent = '-10s';
+    }
+    if (commitLeftTimer) clearTimeout(commitLeftTimer);
+    commitLeftTimer = null;
+  }
+
+  function commitRightSkip() {
+    if (doubleTapRightAcc !== 0 && !isNaN(video.duration)) {
+      video.currentTime = Math.min(video.duration, video.currentTime + doubleTapRightAcc);
+      doubleTapRightAcc = 0;
+      skipLblRight.textContent = '+10s';
+    }
+    if (commitRightTimer) clearTimeout(commitRightTimer);
+    commitRightTimer = null;
+  }
+
+  function accumulateSkip(side, deltaSec) {
+    if (side === 'left') {
+      doubleTapLeftAcc += deltaSec;
+      skipLblLeft.textContent = doubleTapLeftAcc + 's';
+      flashRipple(rippleLeft);
+      showSeekHud(doubleTapLeftAcc);
+      if (commitLeftTimer) clearTimeout(commitLeftTimer);
+      commitLeftTimer = setTimeout(() => commitLeftSkip(), 600);
+    } else {
+      doubleTapRightAcc += deltaSec;
+      skipLblRight.textContent = '+' + doubleTapRightAcc + 's';
+      flashRipple(rippleRight);
+      showSeekHud(doubleTapRightAcc);
+      if (commitRightTimer) clearTimeout(commitRightTimer);
+      commitRightTimer = setTimeout(() => commitRightSkip(), 600);
+    }
   }
 
   /* ═══════════════════════════════════════
-     TAP CIRCLE
+     TAP CIRCLE ANIMATION
   ═══════════════════════════════════════ */
   function spawnTapCircle(clientX, clientY) {
     const rect = wrapper.getBoundingClientRect();
@@ -536,36 +596,55 @@
   }
 
   /* ═══════════════════════════════════════
-     MULTI-TAP SKIP
-     Rapid taps accumulate: +10, +20, +30…
-     Committed 600ms after last tap.
+     DOUBLE TAP / SINGLE TAP LOGIC
   ═══════════════════════════════════════ */
-  function handleSkipTap(side, clientX, clientY) {
-    spawnTapCircle(clientX, clientY);
+  const DOUBLE_TAP_DELAY = 300;
+  let lastTapSide = null;
+  let lastTapTime = 0;
+  let pendingSingleTap = null;
 
-    if (side === 'left') {
-      skipAccLeft -= 10;
-      skipLblLeft.textContent  = skipAccLeft + 's';
-      flashRipple(rippleLeft);
-      showSeekHud(skipAccLeft);
-      clearTimeout(skipTimerLeft);
-      skipTimerLeft = setTimeout(() => {
-        video.currentTime = Math.max(0, video.currentTime + skipAccLeft);
-        skipAccLeft = 0;
-        skipLblLeft.textContent = '-10s';
-      }, 600);
-    } else {
-      skipAccRight += 10;
-      skipLblRight.textContent = '+' + skipAccRight + 's';
-      flashRipple(rippleRight);
-      showSeekHud(skipAccRight);
-      clearTimeout(skipTimerRight);
-      skipTimerRight = setTimeout(() => {
-        video.currentTime = Math.min(video.duration || Infinity, video.currentTime + skipAccRight);
-        skipAccRight = 0;
-        skipLblRight.textContent = '+10s';
-      }, 600);
+  function handleTap(side, clientX, clientY, isTouch = true) {
+    const now = Date.now();
+    // Double tap detection: same side within delay
+    if (lastTapSide === side && (now - lastTapTime) < DOUBLE_TAP_DELAY) {
+      // double-tap occurred
+      if (pendingSingleTap) {
+        clearTimeout(pendingSingleTap);
+        pendingSingleTap = null;
+      }
+      if (side === 'left') {
+        accumulateSkip('left', -10);
+      } else if (side === 'right') {
+        accumulateSkip('right', +10);
+      } else {
+        // center double-tap: toggle play/pause (optional)
+        video.paused ? video.play() : video.pause();
+      }
+      lastTapSide = null;
+      lastTapTime = 0;
+      return;
     }
+    // first tap: store
+    lastTapSide = side;
+    lastTapTime = now;
+    // wait to see if double tap occurs
+    if (pendingSingleTap) clearTimeout(pendingSingleTap);
+    pendingSingleTap = setTimeout(() => {
+      // single tap action
+      if (side === 'left') {
+        // Show brightness preview (existing function without changing value)
+        showBrightnessPreview();
+      } else if (side === 'right') {
+        showVolumePreview();
+      } else if (side === 'center') {
+        // toggle play/pause
+        video.paused ? video.play() : video.pause();
+        spawnTapCircle(clientX, clientY);
+      }
+      pendingSingleTap = null;
+      lastTapSide = null;
+      lastTapTime = 0;
+    }, DOUBLE_TAP_DELAY);
   }
 
   /* ═══════════════════════════════════════
@@ -574,17 +653,18 @@
   const SWIPE_MIN   = 12;    // px to lock direction
   const BRIGHT_SENS = 0.007;
   const VOL_SENS    = 0.007;
-  const SEEK_SENS   = 0.25;  // seconds per px (total delta from start)
+  const SEEK_SENS   = 0.25;  // seconds per px
 
   /* ═══════════════════════════════════════
-     TOUCH GESTURES
+     TOUCH GESTURES (vertical swipe, horizontal seek)
   ═══════════════════════════════════════ */
   let ts = {
     active:false, side:null, dir:null,
     startX:0, startY:0, lastX:0, lastY:0,
-    seekStart:0,      // video.currentTime when swipe began
-    moved:false
+    seekStart:0, moved:false
   };
+
+  const overlay = document.getElementById('gestureOverlay');
 
   overlay.addEventListener('touchstart', (e) => {
     const t    = e.touches[0];
@@ -608,7 +688,6 @@
     const dx = t.clientX - ts.startX;
     const dy = t.clientY - ts.startY;
 
-    /* Lock gesture direction once threshold passed */
     if (!ts.dir) {
       if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return;
       ts.dir   = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
@@ -616,7 +695,6 @@
     }
 
     if (ts.dir === 'vertical') {
-      /* Use delta from last frame for smooth incremental update */
       const dmy   = t.clientY - ts.lastY;
       const delta = -dmy;
       if (ts.side === 'left') {
@@ -627,9 +705,7 @@
         updateVolume();
       }
       e.preventDefault();
-
     } else {
-      /* SEEK: use TOTAL delta from start so position is stable */
       if (!isNaN(video.duration)) {
         const newTime = ts.seekStart + dx * SEEK_SENS;
         video.currentTime = Math.min(video.duration, Math.max(0, newTime));
@@ -644,23 +720,19 @@
 
   overlay.addEventListener('touchend', (e) => {
     if (!ts.moved) {
-      /* It's a tap — determine zone */
-      const t    = e.changedTouches[0];
+      const t = e.changedTouches[0];
       const rect = overlay.getBoundingClientRect();
       const relX = t.clientX - rect.left;
-      const zone =
+      let zone = 
         relX < rect.width / 3       ? 'left' :
         relX > rect.width * 2 / 3   ? 'right' :
                                        'center';
-
-      if      (zone === 'left')   handleSkipTap('left',  t.clientX, t.clientY);
-      else if (zone === 'right')  handleSkipTap('right', t.clientX, t.clientY);
-      else {
-        spawnTapCircle(t.clientX, t.clientY);
-        video.paused ? video.play() : video.pause();
-      }
+      // For touch, spawn circle if center
+      if (zone === 'center') spawnTapCircle(t.clientX, t.clientY);
+      handleTap(zone, t.clientX, t.clientY, true);
     }
     ts.active = false;
+    ts.moved = false;
   });
 
   /* ═══════════════════════════════════════
@@ -723,24 +795,21 @@
     if (!ms2.moved) {
       const rect = overlay.getBoundingClientRect();
       const relX = e.clientX - rect.left;
-      const zone =
+      let zone = 
         relX < rect.width / 3       ? 'left' :
         relX > rect.width * 2 / 3   ? 'right' :
                                        'center';
-
-      if      (zone === 'left')  handleSkipTap('left',  e.clientX, e.clientY);
-      else if (zone === 'right') handleSkipTap('right', e.clientX, e.clientY);
-      else {
-        spawnTapCircle(e.clientX, e.clientY);
-        video.paused ? video.play() : video.pause();
-      }
+      if (zone === 'center') spawnTapCircle(e.clientX, e.clientY);
+      handleTap(zone, e.clientX, e.clientY, false);
     }
+    ms2.down = false;
+    ms2.moved = false;
   });
 
   window.addEventListener('mouseup', () => { ms2.down = false; ms2.moved = false; });
 
   /* ═══════════════════════════════════════
-     EXTERNAL PLAYERS
+     EXTERNAL PLAYERS (unchanged)
   ═══════════════════════════════════════ */
   function mx_player() {
     let c = "{{ file_url }}".replace(/^https?:\/\//, '');
