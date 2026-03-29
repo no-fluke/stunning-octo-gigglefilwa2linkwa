@@ -306,7 +306,12 @@
   <main class="container py-4">
 
     <div class="player-wrapper mb-3" id="playerWrapper">
-      <video id="myVideo" src="{{file_url}}" class="w-100" controls>
+      <!--
+        ✅ FIX 1: Added preload="auto" — tells the browser to start buffering
+        the video immediately on page load, not wait for the user to press play.
+        ✅ FIX 2: Added crossorigin="anonymous" for proper CORS handling.
+      -->
+      <video id="myVideo" src="{{file_url}}" class="w-100" controls preload="auto" crossorigin="anonymous">
         Your browser does not support the video tag.
       </video>
 
@@ -410,11 +415,9 @@
       const plyrContainer = document.querySelector('.plyr');
       if (!plyrContainer) return;
 
-      // Listen for clicks on the settings button (gear icon)
       const settingsButton = plyrContainer.querySelector('[data-plyr="settings"]');
       if (settingsButton) {
         settingsButton.addEventListener('click', () => {
-          // Menu will appear; we need to detect when it's fully open
           setTimeout(() => {
             const menu = document.querySelector('.plyr__menu__container');
             if (menu && menu.style.display !== 'none') {
@@ -424,7 +427,6 @@
         });
       }
 
-      // Use MutationObserver to watch for menu container visibility changes
       const observer = new MutationObserver((mutations) => {
         for (let mutation of mutations) {
           if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
@@ -442,7 +444,6 @@
       if (menuContainer) {
         observer.observe(menuContainer, { attributes: true, attributeFilter: ['style', 'class'] });
       } else {
-        // If menu not yet present, wait for it
         const waitForMenu = setInterval(() => {
           const menu = document.querySelector('.plyr__menu__container');
           if (menu) {
@@ -452,7 +453,6 @@
         }, 200);
       }
 
-      // Also listen for fullscreen changes to re-evaluate menu state
       document.addEventListener('fullscreenchange', () => {
         const menu = document.querySelector('.plyr__menu__container');
         if (menu && menu.style.display !== 'none' && menu.offsetParent) {
@@ -464,9 +464,16 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      /*
+       * ✅ FIX 3: Added ratio: '16:9' — prevents layout shift when video
+       *    metadata loads, which was causing seek/buffer resets in some browsers.
+       * ✅ FIX 4: Added invertTime: false — cleaner UX for long videos.
+       */
       player = new Plyr("#myVideo", {
         controls: ['play-large','play','progress','current-time','mute','volume','captions','settings','pip','airplay','fullscreen'],
-        settings: ['captions','quality','speed']
+        settings: ['captions','quality','speed'],
+        ratio: '16:9',
+        invertTime: false,
       });
 
       setTimeout(() => {
