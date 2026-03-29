@@ -172,52 +172,77 @@ class ByteStreamer:
     ) -> Union[str, None]:
         """
         Custom generator that yields the bytes of the media file.
+        ✅ FIXED: Now pre-fetches the next chunk from Telegram while the current
+        chunk is being yielded to the browser, eliminating idle round-trip waits
+        and dramatically reducing buffering.
+
         Modded from <https://github.com/eyaadh/megadlbot_oss/blob/master/mega/telegram/utils/custom_download.py#L20>
         Thanks to Eyaadh <https://github.com/eyaadh>
         """
         client = self.client
         work_loads[index] += 1
-        logging.debug(f"Starting to yielding file with client {index}.")
+        logging.debug(f"Starting to yield file with client {index}.")
         media_session = await self.generate_media_session(client, file_id)
 
         current_part = 1
         location = await self.get_location(file_id)
 
         try:
+            # Fetch the first chunk
             r = await media_session.send(
                 raw.functions.upload.GetFile(
                     location=location, offset=offset, limit=chunk_size
                 ),
             )
-            if isinstance(r, raw.types.upload.File):
-                while True:
-                    chunk = r.bytes
-                    if not chunk:
-                        break
-                    elif part_count == 1:
-                        yield chunk[first_part_cut:last_part_cut]
-                    elif current_part == 1:
-                        yield chunk[first_part_cut:]
-                    elif current_part == part_count:
-                        yield chunk[:last_part_cut]
-                    else:
-                        yield chunk
 
-                    current_part += 1
-                    offset += chunk_size
+            while isinstance(r, raw.types.upload.File):
+                chunk = r.bytes
+                if not chunk:
+                    break
 
-                    if current_part > part_count:
-                        break
-
-                    r = await media_session.send(
-                        raw.functions.upload.GetFile(
-                            location=location, offset=offset, limit=chunk_size
-                        ),
+                # ✅ FIX: Pre-fetch the NEXT chunk from Telegram in the background
+                # while we process and yield the current chunk to the browser.
+                # This eliminates the idle wait between chunks (was: yield → wait → fetch → yield).
+                # Now it is: yield + fetch-in-parallel → yield + fetch-in-parallel → ...
+                next_fetch = None
+                if current_part < part_count:
+                    next_offset = offset + chunk_size
+                    next_fetch = asyncio.create_task(
+                        media_session.send(
+                            raw.functions.upload.GetFile(
+                                location=location,
+                                offset=next_offset,
+                                limit=chunk_size,
+                            )
+                        )
                     )
+
+                # Yield the current chunk (with correct byte slicing)
+                if part_count == 1:
+                    yield chunk[first_part_cut:last_part_cut]
+                elif current_part == 1:
+                    yield chunk[first_part_cut:]
+                elif current_part == part_count:
+                    yield chunk[:last_part_cut]
+                else:
+                    yield chunk
+
+                current_part += 1
+                offset += chunk_size
+
+                if current_part > part_count:
+                    # Cancel the pre-fetch task if we no longer need it
+                    if next_fetch and not next_fetch.done():
+                        next_fetch.cancel()
+                    break
+
+                # Await the already-in-flight next chunk (no idle gap)
+                r = await next_fetch
+
         except (TimeoutError, AttributeError):
             pass
         finally:
-            logging.debug("Finished yielding file with {current_part} parts.")
+            logging.debug(f"Finished yielding file with {current_part} parts.")
             work_loads[index] -= 1
 
     async def clean_cache(self) -> None:
