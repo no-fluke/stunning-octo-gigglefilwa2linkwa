@@ -6,4 +6,8 @@ RUN pip3 install -U pip && pip3 install -U -r requirements.txt
 RUN mkdir /rexbots
 WORKDIR /rexbots
 COPY . /rexbots
+
+# ✅ Expose the port so Render/Docker knows what to scan
+EXPOSE 2626
+
 CMD ["python", "bot.py"]
