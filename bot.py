@@ -43,6 +43,13 @@ loop = asyncio.get_event_loop()
 async def start():
     print('\n')
     print('Initializing Your Bot')
+
+    # ✅ Start web server FIRST so Render detects the open port immediately
+    app = web.AppRunner(await web_server())
+    await app.setup()
+    await web.TCPSite(app, "0.0.0.0", PORT).start()
+    print(f"✅ Web server started on port {PORT}")
+
     await initialize_clients()
 
     for name in files:
@@ -77,9 +84,6 @@ async def start():
     await StreamBot.send_message(chat_id=ADMINS[0], text='<b>ʙᴏᴛ ʀᴇsᴛᴀʀᴛᴇᴅ !!</b>')
     await StreamBot.send_message(chat_id=SUPPORT_GROUP, text=f"<b>{me.mention} ʀᴇsᴛᴀʀᴛᴇᴅ 🤖</b>")
 
-    app = web.AppRunner(await web_server())
-    await app.setup()
-    await web.TCPSite(app, "0.0.0.0", PORT).start()
     await idle()
 
 if __name__ == '__main__':
