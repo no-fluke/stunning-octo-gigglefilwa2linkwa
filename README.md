@@ -50,7 +50,7 @@ Features a beautiful web interface, premium video player, and robust admin contr
 
 Click the button below, fill in your environment variables, and the bot deploys itself automatically.
 
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/no-fluke/bookish-palm-treesrc789456)
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/no-fluke/stunning-octo-gigglefilwa2linkwa)
 
 > ⚠️ **Replace** `YOUR_USERNAME/YOUR_REPO_NAME` in the button link above with your actual GitHub repo before pushing.
 
