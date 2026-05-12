@@ -46,6 +46,13 @@ Features a beautiful web interface, premium video player, and robust admin contr
 > - **Database**: Robust MongoDB integration for user data and file storage.
 
 ---
+## 🚀 One-Click Deploy to Heroku
+
+Click the button below, fill in your environment variables, and the bot deploys itself automatically.
+
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/no-fluke/bookish-palm-treesrc789456)
+
+> ⚠️ **Replace** `YOUR_USERNAME/YOUR_REPO_NAME` in the button link above with your actual GitHub repo before pushing.
 
 ## 🤖 Bot Commands
 
